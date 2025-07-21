@@ -60,9 +60,6 @@ OSStatus renderNotifyProc(void *inRefCon,
 {
     struct LTMIDIControl *mc = (struct LTMIDIControl *)inRefCon;
     
-    // printf("inNumberFrams = %u\n", inNumberFrames);
-    LTPrintStruct(inTimeStamp);
-
     if (*ioActionFlags & kAudioUnitRenderAction_PreRender)
     {
         for (int i = 0; i < inNumberFrames; i++)
