@@ -33,19 +33,19 @@
 #endif
 
 #ifndef UInt16
-    typedef uint16 UInt16;
+    typedef uint16_t UInt16;
 #endif
 
 #ifndef UInt32
-    typedef uint32 UInt32;
+    typedef uint32_t UInt32;
 #endif
 
 #ifndef UInt64
-    typedef uint64 UInt64;
+    typedef uint64_t UInt64;
 #endif
 
 #ifndef MIDITimeStamp
-    typedef uint64 MIDITimeStamp;
+    typedef uint64_t MIDITimeStamp;
 #endif
 
 
