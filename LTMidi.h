@@ -83,6 +83,15 @@
 #define GM_NUM_CATEGORIES    16
 #define GM_NUM_DRUM_KITS     9
 
+// MIDITimeStamp is a 64-bit unsigned integer. It is the
+// host clock time representing the time of an event, as returned by
+// mach_absolute_time() or UpTime().
+//
+// The time at which the events occurred, if receiving MIDI,
+// or, if sending MIDI, the time at which the events are to
+// be played.  Zero means "now."  The time stamp applies
+// to the first MIDI byte in the packet.
+
 struct LTMidiEvent
 {
     MIDITimeStamp timeStamp;
