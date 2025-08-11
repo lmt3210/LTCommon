@@ -37,9 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
     int mCheckCount;
     NSString *mAppName;
     NSString *mAppVersion;
-    NSString *mLatestVersion;
     NSURLSessionDataTask *mDataTask;
-    NSTimer *mVersionTimer;
 
     // For logging
     os_log_t mLog;

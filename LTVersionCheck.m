@@ -44,71 +44,61 @@
         mAppName = appName;
         mAppVersion = appVersion;
         mCheckCount = 0;
-        mLatestVersion = nil;
+
+        // Watch for version notification
+        [[NSNotificationCenter defaultCenter] addObserver:self
+            selector:@selector(versionReceived:)
+            name:@"LTLatestVersionNotification" object:nil];
 
         // Start version fetch
         [self getLatestVersion];
-
-        // Start timer
-        mVersionTimer = [NSTimer scheduledTimerWithTimeInterval:1
-                         target:self selector:@selector(versionTimer:)
-                         userInfo:nil repeats:YES];
     }
     
     return self;
 }
 
-- (void)versionTimer:(NSTimer *)timer
+- (void)versionReceived:(NSNotification *)notification
 {
-    if ([mDataTask state] != NSURLSessionTaskStateCompleted)
+    if ([[notification name]
+         isEqualToString:@"LTLatestVersionNotification"] == YES)
     {
-        return;
-    }
+        NSDictionary *versionData = [notification userInfo];
+        NSString *latestVersion = [versionData objectForKey:@"Latest Version"];
 
-    [mVersionTimer invalidate];
-    mVersionTimer = nil;
-    
-    if (mLatestVersion == nil)
-    {
-        LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
-              @"Cannot retrieve latest version.");
-        return;
-    }
-    else
-    {
         LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO, @"Latest version is %@",
-              mLatestVersion);
-    }
-
-    NSUserDefaults *userDefaults =
-        [[NSUserDefaultsController sharedUserDefaultsController] values];
-    NSString *settingsKey = [NSString stringWithFormat:@"%@ VersionCheckCount",
-                             mAppName];
-    
-    if ([userDefaults valueForKey:settingsKey] != nil)
-    {
-        NSDictionary *checkDict =
-            [userDefaults valueForKey:settingsKey];
-        NSNumber *checkCountNum = [checkDict objectForKey:mAppVersion];
-        mCheckCount = (checkCountNum == nil) ? 0 : [checkCountNum intValue];
-    }
-
-    if (([mAppVersion isEqualToString:mLatestVersion] == NO) &&
-             (mCheckCount < 3))
-    {
-        [mText setString:@""];
-        [mText appendFormat:@"This is %@ version ", mAppName];
-        [mText appendString:mAppVersion];
-        [mText appendString:@". The latest released version is "];
-        [mText appendString:mLatestVersion];
-        [mText appendString:@"."];
-        [mPopupWindow show];
-        [mPopupWindow setText:(NSString *)mText];
+              latestVersion);
         
-        NSDictionary *check = [NSDictionary dictionaryWithObjectsAndKeys:
-            [NSNumber numberWithInt:(mCheckCount + 1)], mAppVersion, nil];
-         
-        [userDefaults setValue:check forKey:settingsKey];
+        NSUserDefaults *userDefaults =
+        [[NSUserDefaultsController sharedUserDefaultsController] values];
+        NSString *settingsKey =
+            [NSString stringWithFormat:@"%@ VersionCheckCount", mAppName];
+        
+        if ([userDefaults valueForKey:settingsKey] != nil)
+        {
+            NSDictionary *checkDict =
+            [userDefaults valueForKey:settingsKey];
+            NSNumber *checkCountNum = [checkDict objectForKey:mAppVersion];
+            mCheckCount = (checkCountNum == nil) ? 0 :
+                          [checkCountNum intValue];
+        }
+        
+        if (([mAppVersion isEqualToString:latestVersion] == NO) &&
+            (mCheckCount < 3))
+        {
+            [mText setString:@""];
+            [mText appendFormat:@"This is %@ version ", mAppName];
+            [mText appendString:mAppVersion];
+            [mText appendString:@". The latest released version is "];
+            [mText appendString:latestVersion];
+            [mText appendString:@"."];
+            [mPopupWindow show];
+            [mPopupWindow setText:(NSString *)mText];
+            
+            NSDictionary *check = [NSDictionary dictionaryWithObjectsAndKeys:
+                                   [NSNumber numberWithInt:(mCheckCount + 1)],
+                                   mAppVersion, nil];
+            [userDefaults setValue:check forKey:settingsKey];
+        }
     }
 }
 
@@ -134,11 +124,20 @@
  
             for (NSDictionary *jsonDict in jsonDicts)
             {
-                self->mLatestVersion =
+                NSString *latestVersion =
                     [jsonDict valueForKey:self->mAppName];
-     
-                if (self->mLatestVersion != nil)
+         
+                if (latestVersion != nil)
                 {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        NSDictionary *versionData =
+                        [NSDictionary dictionaryWithObjectsAndKeys:
+                         latestVersion, @"Latest Version", nil];
+                        [[NSNotificationCenter defaultCenter]
+                         postNotificationName:@"LTLatestVersionNotification"
+                         object:nil userInfo:versionData];
+                    });
+
                     break;
                 }
             }
