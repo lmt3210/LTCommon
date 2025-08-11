@@ -62,16 +62,13 @@ OSStatus renderNotifyProc(void *inRefCon,
     
     if (*ioActionFlags & kAudioUnitRenderAction_PreRender)
     {
-        for (int i = 0; i < inNumberFrames; i++)
+        if (mc->playTail != mc->playHead)
         {
-            if (mc->playTail != mc->playHead)
-            {
-                MusicDeviceMIDIEvent((MusicDeviceComponent)mc->synthUnit,
-                                     mc->playData[mc->playTail].data[0],
-                                     mc->playData[mc->playTail].data[1],
-                                     mc->playData[mc->playTail].data[2], 0);
-                mc->playTail = (mc->playTail + 1) % kMaxPlayEvents;
-            }
+            MusicDeviceMIDIEvent((MusicDeviceComponent)mc->synthUnit,
+                                 mc->playData[mc->playTail].data[0],
+                                 mc->playData[mc->playTail].data[1],
+                                 mc->playData[mc->playTail].data[2], 0);
+            mc->playTail = (mc->playTail + 1) % kMaxPlayEvents;
         }
     }
 
@@ -187,7 +184,7 @@ void midiReadProc(const MIDIPacketList *inPktList, void *refCon,
                   "status = 0x%.2x, data1 = 0x%.2x, data2 = 0x%.2x",
                   status, data1, data2);
 #endif
- 
+
             // Record if enabled
             if ((sendEvent == true) && (mc->recordEnable == 1) &&
                 (mc->recordCount < kMaxRecordEvents))
