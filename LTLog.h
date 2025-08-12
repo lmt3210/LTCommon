@@ -106,16 +106,10 @@ static inline NSString *statusToString(OSStatus code)
         }
     }
     
-    if (code > 0)
-    {
-        char s[5] = { (char)((code >> 24) & 0xff), (char)((code >> 16) & 0xff),
-            (char)((code >> 8) & 0xff), (char)(code & 0xff), 0 };
-        return [NSString stringWithUTF8String:s];
-    }
-    else
-    {
-        return @"????";
-    }
+    char s[5] = { (char)((code >> 24) & 0xff), (char)((code >> 16) & 0xff),
+        (char)((code >> 8) & 0xff), (char)(code & 0xff), 0 };
+
+    return [NSString stringWithUTF8String:s];
 }
 
 #define LT_STRUCT_MESSAGE_LENGTH  1024
