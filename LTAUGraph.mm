@@ -35,10 +35,9 @@
     return self;
 }
 
-- (AUGraph)createGraph
+- (AudioUnit)createGraph
 {
-    OSStatus err = statusErr;
-    err = NewAUGraph(&mGraph);
+    OSStatus err = NewAUGraph(&mGraph);
     
     if (err != noErr)
     {
@@ -58,7 +57,7 @@
         if (err != noErr)
         {
             LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
-                  @"AUGraphAddNode returned status %i (%@)",
+                  @"AUGraphAddNode for output returned status %i (%@)",
                   err, statusToString(err));
         }
    
@@ -76,23 +75,70 @@
         if (err != noErr)
         {
             LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
-                  @"AUGraphNodeInfo returned status %i (%@)",
+                  @"AUGraphNodeInfo for output returned status %i (%@)",
                   err, statusToString(err));
         }
     }
 
-    return mGraph;
-}
+    // Send graph handle to anyone listening
+    NSNumber *graphHandle =
+        [NSNumber numberWithUnsignedLong:(unsigned long)mGraph];
+    NSDictionary *settings = [NSDictionary dictionaryWithObjectsAndKeys:
+                              graphHandle, @"mGraph", nil];
+    [[NSNotificationCenter defaultCenter]
+      postNotificationName:@"LTGraphNotification" object:nil
+      userInfo:settings];
 
-- (AudioUnit)getOutputUnit;
-{
     return mOutputUnit;
 }
 
-- (void)startGraph:(AUNode)synthNode
+- (AudioUnit)addSynth:(AudioComponentDescription)desc
 {
-    mSynthNode = synthNode;
+    OSStatus err = AUGraphAddNode(mGraph, &desc, &mSynthNode);
 
+    if (err != noErr)
+    {
+        LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+              @"AUGraphAddNode for AU returned status %i (%@)",
+              err, statusToString(err));
+        return nil;
+    }
+
+    err = AUGraphNodeInfo(mGraph, mSynthNode, NULL, &mSynthUnit);
+
+    if (err != noErr)
+    {
+        LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+              @"AUGraphNodeInfo for AU returned status %i (%@)",
+              err, statusToString(err));
+    }
+
+    err = AUGraphUpdate(mGraph, NULL);
+
+    if (err != noErr)
+    {
+        LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+              @"AUGraphUpdate returned status %i (%@)",
+              err, statusToString(err));
+    }
+
+    return mSynthUnit;
+}
+
+- (void)removeSynth
+{
+    OSStatus err = AUGraphRemoveNode(mGraph, mSynthNode);
+
+    if (err != noErr)
+    {
+        LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+              @"AUGraphRemoveNode for AU returned status %i (%@)",
+              err, statusToString(err));
+    }
+}
+
+- (void)startGraph
+{
     if (mGraph)
     {
         OSStatus err = AUGraphConnectNodeInput(mGraph, mSynthNode, 0,
@@ -210,6 +256,130 @@
             LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
                   @"DisposeAUGraph returned status %i (%@)",
                   err, statusToString(err));
+        }
+    }
+}
+
+- (void)graphInfo
+{
+    OSStatus err = statusErr;
+    UInt32 numNodes = 0;
+
+    err = AUGraphGetNodeCount(mGraph, &numNodes);
+
+    if (err == noErr)
+    {
+        LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
+              @"AUGraph has %i nodes", numNodes);
+    }
+    else
+    {
+        LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+              @"AUGraphGetNodeCount returned status %i (%@)",
+              err, statusToString(err));
+    }
+
+    for (UInt32 i = 0; i < numNodes; i++)
+    {
+        AUNode node;
+        err = AUGraphGetIndNode(mGraph, i, &node);
+
+        if (err != noErr)
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                  @"AUGraphGetIndNode returned status %i (%@)",
+                  err, statusToString(err));
+        }
+
+        AudioComponentDescription desc = { 0 };
+        AudioUnit au = NULL;
+
+        err = AUGraphNodeInfo(mGraph, node, &desc, &au);
+
+        if (err == noErr)
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
+                  @"AUGraph node %i: type %@, subtype %@, manufacturer %@", i,
+                  statusToString(desc.componentType),
+                  statusToString(desc.componentSubType),
+                  statusToString(desc.componentManufacturer));
+        }
+        else
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                  @"AUGraphGetNodeInfo for node %i returned status %i (%@)",
+                  i, err, statusToString(err));
+        }
+
+        UInt32 count = 0;                   
+        UInt32 countSize = sizeof(count);
+        err = AudioUnitGetProperty(au, kAudioUnitProperty_ElementCount,
+                                   kAudioUnitScope_Input, 0, 
+                                   &count, &countSize);
+  
+        if (err == noErr)
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
+                  @"AUGraph node %i: input count = %i", i, count);
+        }
+        else
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                  @"Get element count for node %i input error = %i (%@)",
+                  i, err, statusToString(err));
+        }
+
+        err = AudioUnitGetProperty(au, kAudioUnitProperty_ElementCount,
+                                   kAudioUnitScope_Output, 0, 
+                                   &count, &countSize);
+  
+        if (err == noErr)
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
+                  @"AUGraph node %i: output count = %i", i, count);
+        }
+        else
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                  @"Get element count for node %i output error = %i (%@)",
+                  i, err, statusToString(err));
+        }
+
+        AudioStreamBasicDescription format = { 0 };
+        UInt32 absdSize = sizeof(format);
+        NSString *absdText;
+    
+        err = AudioUnitGetProperty(au, kAudioUnitProperty_StreamFormat,
+                                   kAudioUnitScope_Input, 0,
+                                   &format, &absdSize);
+        if (err == noErr)
+        {
+            LTGetStructString(&format, absdText);
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
+                  @"AUGraph node %i input %@", i, absdText);
+        }
+        else
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                  @"Get element count for node %i input error = %i (%@)",
+                  i, err, statusToString(err));
+        }
+    
+        err = AudioUnitGetProperty(au, kAudioUnitProperty_StreamFormat,
+                                   kAudioUnitScope_Output, 0,
+                                   &format, &absdSize);
+
+        if (err == noErr)
+        {
+            LTGetStructString(&format, absdText);
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
+                  @"AUGraph node %i output %@", i, absdText);
+        }
+        else
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                  @"Get element count for node %i output error = %i (%@)",
+                  i, err, statusToString(err));
         }
     }
 }

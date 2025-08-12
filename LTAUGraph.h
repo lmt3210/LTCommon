@@ -36,6 +36,7 @@
     AUNode mSynthNode;
     AUNode mOutputNode;
     AudioUnit mOutputUnit;
+    AudioUnit mSynthUnit;
 
     // For logging
     os_log_t mLog;
@@ -43,10 +44,12 @@
 }
 
 - (id)initWithLogHandle:(os_log_t)log withLogFile:(NSString *)logFile;
-- (AUGraph)createGraph;
-- (AudioUnit)getOutputUnit;
-- (void)startGraph:(AUNode)synthNode;
+- (AudioUnit)createGraph;
+- (AudioUnit)addSynth:(AudioComponentDescription)desc;
+- (void)removeSynth;
+- (void)startGraph;
 - (void)stopGraph;
 - (void)destroyGraph;
+- (void)graphInfo;
 
 @end
