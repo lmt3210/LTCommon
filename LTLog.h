@@ -20,16 +20,22 @@
 //    distribution.
 //
 
+#import <string.h>
 #import <os/log.h>
 #import <sys/types.h>
 #import <pwd.h>
 #import <uuid/uuid.h>
 
+#import "LTCAConstants.h"
+
+
+#ifndef LT_NO_COCOA
 #define LTLOG_NO_FILE  @""
 
-// OS_LOG_TYPE_INFO
-// OS_LOG_TYPE_DEBUG
-// OS_LOG_TYPE_ERROR
+// Log types:
+//     OS_LOG_TYPE_INFO
+//     OS_LOG_TYPE_DEBUG
+//     OS_LOG_TYPE_ERROR
 
 static inline void LTLog(os_log_t log, NSString *logFile, 
                          os_log_type_t type, NSString *format, ...)
@@ -54,55 +60,36 @@ static inline void LTLog(os_log_t log, NSString *logFile,
 
     va_end(args);
 }
+#endif
 
-struct LTauErrors
+#ifdef LT_NO_COCOA
+static inline void statusToString(OSStatus code, char *str)
 {
-    NSString *message;
-    OSStatus code;
-};
+    for (int i = 0; i < (sizeof(auErrorList) / sizeof(struct LTauErrors)); i++)
+    {
+        if (auErrorList[i].code == code)
+        {
+            strcpy(str, auErrorList[i].message);
+            return;
+        }
+    }
 
-static const struct LTauErrors auErrorList[] =
-{
-    { @"kAudio_ParamError", -50},
-    // These are from AUComponent.h - Audio Unit errors enum
-    { @"kAudioUnitErr_InvalidProperty", -10879 },
-    { @"kAudioUnitErr_InvalidParameter", -10878 },
-    { @"kAudioUnitErr_InvalidElement", -10877 },
-    { @"kAudioUnitErr_NoConnection", -10876 },
-    { @"kAudioUnitErr_FailedInitialization", -10875 },
-    { @"kAudioUnitErr_TooManyFramesToProcess", -10874 },
-    { @"kAudioUnitErr_InvalidFile", -10871 },
-    { @"kAudioUnitErr_UnknownFileType", -10870 },
-    { @"kAudioUnitErr_FileNotSpecified", -10869 },
-    { @"kAudioUnitErr_FormatNotSupported", -10868 },
-    { @"kAudioUnitErr_Uninitialized", -10867 },
-    { @"kAudioUnitErr_InvalidScope", -10866 },
-    { @"kAudioUnitErr_PropertyNotWritable", -10865 },
-    { @"kAudioUnitErr_CannotDoInCurrentContext", -10863 },
-    { @"kAudioUnitErr_InvalidPropertyValue", -10851 },
-    { @"kAudioUnitErr_PropertyNotInUse", -10850 },
-    { @"kAudioUnitErr_Initialized", -10849 },
-    { @"kAudioUnitErr_InvalidOfflineRender", -10848 },
-    { @"kAudioUnitErr_Unauthorized", -10847 },
-    { @"kAudioUnitErr_MIDIOutputBufferFull", -66753 },
-    { @"kAudioComponentErr_InstanceTimedOut", -66754 },
-    { @"kAudioComponentErr_InstanceInvalidated", -66749 },
-    { @"kAudioUnitErr_RenderTimeout", -66745 },
-    { @"kAudioUnitErr_ExtensionNotFound", -66744 },
-    { @"kAudioUnitErr_InvalidParameterValue", -66743 },
-    { @"kAudioUnitErr_InvalidFilePath", -66742 },
-    { @"kAudioUnitErr_MissingKey", -66741 },
-    { @"kAudioUnitErr_ComponentManagerNotSupported", -66740 },
-    { @"kAudioUnitErr_MultipleVoiceProcessors", -66635 }
-};
+    str[0] = (char)((code >> 24) & 0xff);
+    str[1] = (char)((code >> 16) & 0xff);
+    str[2] = (char)((code >> 8) & 0xff);
+    str[3] = (char)(code & 0xff);
+    str[4] = 0;
 
+    return;
+}
+#else
 static inline NSString *statusToString(OSStatus code)
 {
     for (int i = 0; i < (sizeof(auErrorList) / sizeof(struct LTauErrors)); i++)
     {
         if (auErrorList[i].code == code)
         {
-            return auErrorList[i].message;
+            return [NSString stringWithUTF8String:auErrorList[i].message];
         }
     }
     
@@ -111,6 +98,7 @@ static inline NSString *statusToString(OSStatus code)
 
     return [NSString stringWithUTF8String:s];
 }
+#endif
 
 #define LT_STRUCT_MESSAGE_LENGTH  1024
 
@@ -135,3 +123,8 @@ static inline void LTGetStructStringHelper(const char *format, ...)
 #define LTPrintStruct(s) \
     __builtin_dump_struct(s, &printf);
 
+#define LTLogStruct(s, msg, log) \
+    memset(structStr, 0, LT_STRUCT_MESSAGE_LENGTH); \
+    __builtin_dump_struct(s, &LTGetStructStringHelper); \
+    os_log_with_type(log, OS_LOG_TYPE_INFO, "%{public}s: %{public}s", \
+    msg, structStr)

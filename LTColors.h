@@ -28,7 +28,7 @@ struct colorTable
 
 const struct colorTable colorList[] =
 {
-    { @"Black", 0x000000 },
+    { @"LT Purple", 0x3d275d },
     { @"Alice Blue", 0xf0f8ff },
     { @"Aqua", 0x00ffff },
     { @"Aquamarine", 0x7fffd4 },
