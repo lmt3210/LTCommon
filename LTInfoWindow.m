@@ -32,10 +32,16 @@
 {
     [super windowDidLoad];
     
-    [self.window setBackgroundColor:[NSColor colorWithRed:0.2
-                                     green:0.2 blue:0.2 alpha:1.0]];
+    [self.window setBackgroundColor:[NSColor colorWithSRGBRed:(61.0 / 255.0)
+                                     green:(39.0 / 255.0) blue:(93.0 / 255.0)
+                                     alpha:1.0]];
     NSFont *font = [NSFont fontWithName:@"Courier" size:10];
     [mTextView setFont:font];
+
+    [mTextView setBackgroundColor:[NSColor colorWithSRGBRed:(61.0 / 255.0)
+                                   green:(39.0 / 255.0) blue:(93.0 / 255.0)
+                                   alpha:1.0]];
+    [mTextView setTextColor:[NSColor whiteColor]];
 }
 
 - (void)setTitle:(NSString *)title
