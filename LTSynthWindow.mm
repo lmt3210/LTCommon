@@ -75,8 +75,8 @@
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self
       name:NSViewFrameDidChangeNotification object:mAUView];
-    [mAUView removeFromSuperview];
     [mAUWindow setIsVisible:false];
+    [mAUView removeFromSuperview];
 }
 
 - (void)setAUViewLocation:(NSRect)frame
