@@ -33,7 +33,7 @@
 // The action method to display the "About..." window can just send an
 // `orderFront:` message to this singleton window controller's window, and
 // return right away.
-+ (instancetype) defaultController;
++ (instancetype)defaultController;
 
 // Displays app name (obtained from Info.plist key "CFBundleName")
 @property (weak) IBOutlet NSTextField *appNameLabel;

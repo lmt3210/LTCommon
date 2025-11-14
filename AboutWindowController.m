@@ -28,7 +28,7 @@
 @implementation AboutWindowController
 
 // Singleton (see header file)
-+ (instancetype) defaultController
++ (instancetype)defaultController
 {
     static id staticInstance = nil;
     static dispatch_once_t onceToken;
@@ -40,16 +40,12 @@
     return staticInstance;
 }
 
-#pragma mark - Initialization
-
-- (instancetype) init
+- (instancetype)init
 {
     return [super initWithWindowNibName:@"AboutWindow" owner:self];
 }
 
-#pragma mark - NSWindowController
-
-- (void) windowDidLoad
+- (void)windowDidLoad
 {
     [super windowDidLoad];
     
