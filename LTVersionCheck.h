@@ -1,7 +1,7 @@
 // 
 // LTVersionCheck.h
 //
-// Copyright (c) 2020-2025 Larry M. Taylor
+// Copyright (c) 2020-2026 Larry M. Taylor
 //
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -44,10 +44,15 @@ NS_ASSUME_NONNULL_BEGIN
     NSString *mLogFile;
 }
 
+- (id)init;
 - (id)initWithAppName:(NSString *)appName
        withAppVersion:(NSString *)appVersion
         withLogHandle:(os_log_t)log
           withLogFile:(NSString *)logFile;
+- (void)checkVersionForAppName:(NSString *)appName
+                withAppVersion:(NSString *)appVersion
+                 withLogHandle:(os_log_t)log
+                   withLogFile:(NSString *)logFile;
 
 @end
 
