@@ -165,9 +165,10 @@
             [mText setString:@"\n"];
             [mText appendFormat:@"This is %@ version ", mAppName];
             [mText appendString:mAppVersion];
-            [mText appendString:@".\n\nThe latest released version is "];
+            [mText appendString:@".\nThe latest released version is "];
             [mText appendString:latestVersion];
-            [mText appendString:@"."];
+            [mText appendString:@".\nSee the help support "
+                                 "page to download updates."];
             [mPopupWindow show];
             [mPopupWindow setText:(NSString *)mText];
         }
