@@ -52,6 +52,16 @@
 @property (weak) IBOutlet NSImageView *appIconImageView;
 
 // Add more custom subviews to display any additional information here
-@property (weak) IBOutlet NSTextField *appWebsiteLabel;
+@property (weak) IBOutlet NSButton *mWebsiteButton1;
+@property (weak) IBOutlet NSButton *mWebsiteButton2;
+@property (weak) IBOutlet NSButton *mWebsiteButton3;
+
+- (IBAction)mWebsiteLink1:(id)sender;
+- (IBAction)mWebsiteLink2:(id)sender;
+- (IBAction)mWebsiteLink3:(id)sender;
+
+@property NSString *mWebLink1;
+@property NSString *mWebLink2;
+@property NSString *mWebLink3;
 
 @end
