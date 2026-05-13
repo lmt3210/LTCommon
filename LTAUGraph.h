@@ -51,5 +51,8 @@
 - (void)stopGraph;
 - (void)destroyGraph;
 - (void)graphInfo;
+- (void)showAUState:(AudioUnit)au forAUName:(NSString *)name;
+- (void)showAUInfo:(AudioUnit)au forAUName:(NSString *)name
+    hasInput:(bool)hasInput hasOutput:(bool)hasOutput;
 
 @end

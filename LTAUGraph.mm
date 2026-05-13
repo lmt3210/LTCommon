@@ -80,15 +80,6 @@
         }
     }
 
-    // Send graph handle to anyone listening
-    NSNumber *graphHandle =
-        [NSNumber numberWithUnsignedLong:(unsigned long)mGraph];
-    NSDictionary *settings = [NSDictionary dictionaryWithObjectsAndKeys:
-                              graphHandle, @"mGraph", nil];
-    [[NSNotificationCenter defaultCenter]
-      postNotificationName:@"LTGraphNotification" object:nil
-      userInfo:settings];
-
     return mOutputUnit;
 }
 
@@ -127,14 +118,19 @@
 
 - (void)removeSynth
 {
-    OSStatus err = AUGraphRemoveNode(mGraph, mSynthNode);
-
-    if (err != noErr)
+    if (mSynthNode)
     {
-        LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
-              @"AUGraphRemoveNode for AU returned status %i (%@)",
-              err, statusToString(err));
-    }
+        OSStatus err = AUGraphRemoveNode(mGraph, mSynthNode);
+
+        if (err != noErr)
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                  @"AUGraphRemoveNode returned status %i (%@)",
+                  err, statusToString(err));
+        }
+
+        mSynthNode = NULL;
+    }    
 }
 
 - (void)startGraph
@@ -311,16 +307,16 @@
                   i, err, statusToString(err));
         }
 
-        UInt32 count = 0;                   
-        UInt32 countSize = sizeof(count);
+        UInt32 inputCount = 0;                   
+        UInt32 inputCountSize = sizeof(inputCount);
         err = AudioUnitGetProperty(au, kAudioUnitProperty_ElementCount,
                                    kAudioUnitScope_Input, 0, 
-                                   &count, &countSize);
+                                   &inputCount, &inputCountSize);
   
         if (err == noErr)
         {
             LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
-                  @"AUGraph node %i: input count = %i", i, count);
+                  @"AUGraph node %i: input count = %i", i, inputCount);
         }
         else
         {
@@ -329,14 +325,16 @@
                   i, err, statusToString(err));
         }
 
+        UInt32 outputCount = 0;                   
+        UInt32 outputCountSize = sizeof(outputCount);
         err = AudioUnitGetProperty(au, kAudioUnitProperty_ElementCount,
                                    kAudioUnitScope_Output, 0, 
-                                   &count, &countSize);
+                                   &outputCount, &outputCountSize);
   
         if (err == noErr)
         {
             LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
-                  @"AUGraph node %i: output count = %i", i, count);
+                  @"AUGraph node %i: output count = %i", i, outputCount);
         }
         else
         {
@@ -345,42 +343,182 @@
                   i, err, statusToString(err));
         }
 
-        AudioStreamBasicDescription format = { 0 };
-        UInt32 absdSize = sizeof(format);
-        NSString *absdText;
-    
-        err = AudioUnitGetProperty(au, kAudioUnitProperty_StreamFormat,
-                                   kAudioUnitScope_Input, 0,
-                                   &format, &absdSize);
-        if (err == noErr)
+        if (inputCount > 0)
         {
-            LTGetStructString(&format, absdText);
-            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
-                  @"AUGraph node %i input %@", i, absdText);
+            AudioStreamBasicDescription format = { 0 };
+            UInt32 absdSize = sizeof(format);
+            NSString *absdText;
+    
+            err = AudioUnitGetProperty(au, kAudioUnitProperty_StreamFormat,
+                                       kAudioUnitScope_Input, 0,
+                                       &format, &absdSize);
+            if (err == noErr)
+            {
+                LTGetStructString(&format, absdText);
+                LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
+                      @"AUGraph node %i input %@", i, absdText);
+            }
+            else
+            {
+                LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                      @"Get stream format for node %i input error = %i (%@)",
+                      i, err, statusToString(err));
+            }
+        }
+    
+        if (outputCount > 0)
+        {
+            AudioStreamBasicDescription format = { 0 };
+            UInt32 absdSize = sizeof(format);
+            NSString *absdText;
+
+            err = AudioUnitGetProperty(au, kAudioUnitProperty_StreamFormat,
+                                       kAudioUnitScope_Output, 0,
+                                       &format, &absdSize);
+
+            if (err == noErr)
+            {
+                LTGetStructString(&format, absdText);
+                LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
+                      @"AUGraph node %i output %@", i, absdText);
+            }
+            else
+            {
+                LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                      @"Get stream format for node %i output error = %i (%@)",
+                      i, err, statusToString(err));
+            }
+        }
+    }
+}
+
+- (void)showAUState:(AudioUnit)au forAUName:(NSString *)name
+{
+    LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO, @"%@ AU state:", name);
+    
+    CFPropertyListRef propertyList;
+    UInt32 sz = sizeof(propertyList);
+    AudioUnitGetProperty(au, kAudioUnitProperty_ClassInfo,
+                         kAudioUnitScope_Global, 0, &propertyList, &sz);
+
+    NSDictionary *auState = CFBridgingRelease(propertyList);
+    
+    for (NSString *key in auState)
+    {
+        id value = auState[key];
+        
+        if ([key isEqualToString:@"type"] ||
+            [key isEqualToString:@"subtype"] ||
+            [key isEqualToString:@"manufacturer"])
+        {
+            int tmp = [value intValue];
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO, @"    %@ = %@", key,
+                  statusToString(tmp));
+        }
+        else if ([key isEqualToString:@"version"])
+        {
+            int tmp = [value intValue];
+            NSString *version = [NSString stringWithFormat:@"    %i.%i.%i",
+                                 ((tmp >> 16) & 0x0000ffff),
+                                 ((tmp >> 8) & 0x000000ff),
+                                 (tmp & 0x000000ff)];
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO, @"    %@ = %@",
+                  key, version);
         }
         else
         {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO, @"    %@ = %@",
+                  key, value);
+        }
+    }
+}
+
+- (void)showAUInfo:(AudioUnit)au forAUName:(NSString *)name
+    hasInput:(bool)hasInput hasOutput:(bool)hasOutput
+{
+    AudioStreamBasicDescription format = { 0 };
+    UInt32 absdSize = sizeof(format);
+    NSString *absdText;
+    OSStatus err = statusErr;
+    
+    if (hasOutput == true)
+    {
+        err = AudioUnitGetProperty(au, kAudioUnitProperty_StreamFormat,
+                                   kAudioUnitScope_Input, 0,
+                                   &format, &absdSize);
+
+        if (err != noErr)
+        {
             LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
-                  @"Get element count for node %i input error = %i (%@)",
-                  i, err, statusToString(err));
+                  @"Failed AudioUnitGetProperty for "
+                   "kAudioUnitProperty_StreamFormat for input scope, "
+                   "error = %i (%@)", err, statusToString(err));
+        }
+        else
+        {
+            LTGetStructString(&format, absdText);
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
+                  @"    %@ AU (input scope) %@", name, absdText);
         }
     
         err = AudioUnitGetProperty(au, kAudioUnitProperty_StreamFormat,
                                    kAudioUnitScope_Output, 0,
                                    &format, &absdSize);
 
-        if (err == noErr)
+        if (err != noErr)
         {
-            LTGetStructString(&format, absdText);
-            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
-                  @"AUGraph node %i output %@", i, absdText);
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                  @"Failed AudioUnitGetProperty for "
+                   "kAudioUnitProperty_StreamFormat for output scope, "
+                   "error = %i (%@)", err, statusToString(err));
         }
         else
         {
-            LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
-                  @"Get element count for node %i output error = %i (%@)",
-                  i, err, statusToString(err));
+            LTGetStructString(&format, absdText);
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO,
+                  @"    %@ AU (output scope) %@", name, absdText);
         }
+    }
+    
+    if (hasOutput == true)
+    {
+        UInt32 auRunning = 0;
+        UInt32 runSize = sizeof(auRunning);
+        err = AudioUnitGetProperty(au, kAudioOutputUnitProperty_IsRunning,
+                                   kAudioUnitScope_Global, 0,
+                                   &auRunning, &runSize);
+        
+        if (err != noErr)
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+                  @"Failed AudioUnitGetProperty for "
+                  "kAudioOutputUnitProperty_IsRunning, error = %i (%@)",
+                  err, statusToString(err));
+        }
+        else
+        {
+            LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO, @"    %@ AU running = %i",
+                  name, auRunning);
+        }
+    }
+    
+    UInt32 framesPerSlice;
+    UInt32 dataSize = sizeof(framesPerSlice);
+    err = AudioUnitGetProperty(au, kAudioUnitProperty_MaximumFramesPerSlice,
+                         kAudioUnitScope_Global, 0,
+                         &framesPerSlice, &dataSize);
+
+    if (err != noErr)
+    {
+        LTLog(mLog, mLogFile, OS_LOG_TYPE_ERROR,
+              @"Failed AudioUnitGetProperty for "
+               "kAudioUnitProperty_MaximumFramesPerSlice, error = %i (%@)",
+              err, statusToString(err));
+    }
+    else
+    {
+        LTLog(mLog, mLogFile, OS_LOG_TYPE_INFO, @"    %@ AU buffer size = %i",
+              name, framesPerSlice);
     }
 }
 

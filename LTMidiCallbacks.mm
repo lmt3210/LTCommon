@@ -71,6 +71,20 @@ OSStatus renderNotifyProc(void *inRefCon,
             mc->playTail = (mc->playTail + 1) % kMaxPlayEvents;
         }
     }
+    else if (*ioActionFlags & kAudioUnitRenderAction_PostRender)
+    {
+        if (mc->midiOnly == 1)
+        {
+            for (int i = 0; i < ioData->mNumberBuffers; i++)
+            {
+                if (ioData->mBuffers[i].mData != NULL)
+                {
+                    memset(ioData->mBuffers[i].mData, 0,
+                           ioData->mBuffers[i].mDataByteSize);
+                }
+            }
+        }
+    }
 
     return noErr;
 }

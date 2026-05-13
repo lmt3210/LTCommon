@@ -43,6 +43,7 @@ struct LTMIDIControl
 {
     os_log_t log;
     AudioUnit synthUnit;
+    int midiOnly;
     int channel;
     int low;
     int high;

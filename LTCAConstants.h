@@ -134,6 +134,14 @@ static const struct LTauParameterIDs auParameterIDs[] =
     { "kMusicDeviceProperty_PartGroup", 1010 },
     { "kMusicDeviceProperty_DualSchedulingMode", 1013 },
     { "kMusicDeviceProperty_SupportsStartStopNote", 1014 },
+    { "kAudioOutputUnitProperty_CurrentDevice", 2000 },
+    { "kAudioOutputUnitProperty_IsRunning", 2001 },
+    { "kAudioOutputUnitProperty_ChannelMap", 2002 },
+    { "kAudioOutputUnitProperty_EnableIO", 2003 },
+    { "kAudioOutputUnitProperty_StartTime", 2004 },
+    { "kAudioOutputUnitProperty_SetInputCallback", 2005 },
+    { "kAudioOutputUnitProperty_HasIO", 2006 },
+    { "kAudioOutputUnitProperty_StartTimestampsAtZero", 2007 },
     // This is my custom property ID
     { "kAudioUnitCustomPropertyUICB", 64056 }
 };
